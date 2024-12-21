@@ -50,7 +50,7 @@ const UserDashboard = () => {
                                         className="flex justify-between items-center cursor-pointer"
                                         onClick={() => toggleProject(project._id)}
                                     >
-                                        <div>
+                                        <div className='max-w-4xl'>
                                             <h4 className="text-lg font-medium">{project.projectId.title}</h4>
                                             <p className="text-gray-600">{project.projectId.description}</p>
                                         </div>
