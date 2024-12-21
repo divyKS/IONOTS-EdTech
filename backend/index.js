@@ -2,9 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const connectDB = require('./db/index')
 const cors = require('cors');
-const projectSchema = require('./models/project');
-const candidateProjectSchema = require('./models/candidateProject');
-const candidateSchema = require('./models/candidate');
+const User = require('./models/user')
+const Project = require('./models/project')
+const AssignedProject = require('./models/assignedProject')
 
 const app = express();
 
@@ -15,95 +15,116 @@ connectDB();
 
 const PORT = process.env.PORT || 3500;
 
-// Candidate Routes
-app.post('/api/candidates', async (req, res) => {
+// User routes
+app.get('/api/users', async (req, res) => {
   try {
-    const candidate = new candidateSchema(req.body);
-    await candidate.save();
-    res.status(201).json(candidate);
+      const users = await User.find();
+      res.json(users);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+      res.status(500).json({ message: error.message });
   }
 });
 
-app.get('/api/candidates', async (req, res) => {
+app.post('/api/users', async (req, res) => {
   try {
-    const candidates = await candidateSchema.find();
-    res.json(candidates);
+      const user = new User(req.body);
+      await user.save();
+      res.status(201).json(user);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+      res.status(400).json({ message: error.message });
   }
 });
 
-app.get('/api/candidates/:id', async (req, res) => {
-  try {
-    const candidate = await candidateSchema.findById(req.params.id);
-    if (!candidate) {
-      return res.status(404).json({ message: 'Candidate not found' });
-    }
-    res.json(candidate);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Get all projects
+// Project routes
 app.get('/api/projects', async (req, res) => {
   try {
-    const projects = await projectSchema.find();
-    res.json(projects);
+      const projects = await Project.find();
+      res.json(projects);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+      res.status(500).json({ message: error.message });
   }
 });
 
-// Assign project to candidate
-app.post('/api/projects/assign', async (req, res) => {
+app.post('/api/projects', async (req, res) => {
   try {
-    const { candidateId, projectId } = req.body;
-    
-    const candidate = await candidateSchema.findById(candidateId);
-    if (!candidate) {
-      return res.status(404).json({ message: 'Candidate not found' });
-    }
-
-    const candidateProject = new candidateProjectSchema({
-      candidateId,
-      projectId
-    });
-    await candidateProject.save();
-    await projectSchema.findByIdAndUpdate(projectId, { status: 'assigned' });
-    res.status(201).json(candidateProject);
+      const project = new Project(req.body);
+      await project.save();
+      res.status(201).json(project);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+      res.status(400).json({ message: error.message });
   }
 });
 
-// Get candidate's projects
-app.get('/api/candidates/:candidateId/projects', async (req, res) => {
+// Assigned Project routes
+app.get('/api/assigned-projects', async (req, res) => {
   try {
-    const candidateProjects = await candidateProjectSchema.find({ candidateId: req.params.candidateId })
-      .populate('projectId')
-      .exec();
-    res.json(candidateProjects);
+      const assignedProjects = await AssignedProject.find()
+          .populate('studentId')
+          .populate('projectId');
+      res.json(assignedProjects);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+      res.status(500).json({ message: error.message });
   }
 });
 
-
-// Update project progress
-app.put('/api/projects/progress', async (req, res) => {
+app.get('/api/assigned-projects/student/:studentId', async (req, res) => {
   try {
-    const { candidateProjectId, progress, score } = req.body;
-    const updatedProject = await candidateProjectSchema.findByIdAndUpdate(
-      candidateProjectId,
-      { progress, score },
-      { new: true }
-    );
-    res.json(updatedProject);
+      const assignedProjects = await AssignedProject.find({ studentId: req.params.studentId })
+          .populate('projectId');
+      res.json(assignedProjects);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+      res.status(500).json({ message: error.message });
+  }
+});
+
+app.post('/api/assigned-projects', async (req, res) => {
+  try {
+      const { studentId, projectId } = req.body;
+      const existingAssignment = await AssignedProject.findOne({ studentId, projectId });
+      
+      if (existingAssignment) {
+          return res.status(400).json({ message: 'Project already assigned to this student' });
+      }
+
+      const assignedProject = new AssignedProject({
+          studentId,
+          projectId,
+          stepsCompleted: 0,
+          progress: 0,
+          score: 0
+      });
+      await assignedProject.save();
+      res.status(201).json(assignedProject);
+  } catch (error) {
+      res.status(400).json({ message: error.message });
+  }
+});
+
+app.put('/api/assigned-projects/:id', async (req, res) => {
+  try {
+      const { stepsCompleted } = req.body;
+      const assignedProject = await AssignedProject.findById(req.params.id)
+          .populate('projectId');
+      
+      const totalSteps = assignedProject.projectId.steps;
+      const progress = (stepsCompleted / totalSteps) * 100;
+      const score = progress; // Simple scoring based on progress
+      const status = progress === 100 ? 'completed' : 'in_progress';
+
+      const updatedProject = await AssignedProject.findByIdAndUpdate(
+          req.params.id,
+          {
+              stepsCompleted,
+              progress,
+              score,
+              status
+          },
+          { new: true }
+      ).populate('projectId');
+
+      res.json(updatedProject);
+  } catch (error) {
+      res.status(400).json({ message: error.message });
   }
 });
 
