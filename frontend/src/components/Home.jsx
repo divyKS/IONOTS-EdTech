@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { useUser } from '../context/UserContext';
 import axios from 'axios';
 
@@ -7,6 +7,7 @@ const Home = () => {
     const [users, setUsers] = useState([]);
     const { setCurrentUser } = useUser();
     const navigate = useNavigate();
+    const location = useLocation()
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -15,6 +16,12 @@ const Home = () => {
         };
         fetchUsers();
     }, []);
+
+    useEffect(() => {
+        if (location.pathname === "/") {
+          setCurrentUser(null);
+        }
+      }, [location.pathname]);
 
     const handleUserSelect = (user) => {
         setCurrentUser(user);

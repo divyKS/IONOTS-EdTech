@@ -202,13 +202,27 @@ const AdminDashboard = () => {
       >
         Cancel
       </Button>
-      <Button
+      <div className="relative group">
+        <Button
+          onClick={handleAssignProjects}
+          disabled={selectedProjectIds.length === 0}
+          className="bg-blue-500 hover:bg-blue-600 text-white disabled:bg-gray-500 disabled:cursor-not-allowed"
+        >
+          Confirm Assignment
+        </Button>
+        {selectedProjectIds.length === 0 && (
+          <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-700 text-white text-xs rounded px-2 py-1">
+            Please select some projects to assign
+          </div>
+        )}
+      </div>
+      {/* <Button
         onClick={handleAssignProjects}
         disabled={selectedProjectIds.length === 0}
-        className="bg-blue-500 hover:bg-blue-600 text-white"
+        className="bg-blue-500 hover:bg-blue-600 text-white disabled:bg-gray-500 disabled:cursor-not-allowed"
       >
         Confirm Assignment
-      </Button>
+      </Button> */}
     </div>
   </div>
 </Modal>
